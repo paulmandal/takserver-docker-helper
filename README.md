@@ -16,3 +16,5 @@ To use:
 If you want to wipe the server and start fresh, delete and re-create the `tak-db` folder.
 
 Certs are in `tak/certs/files`
+
+Why not give me a bunch of money? [![](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/paypalme/paypaulmandal)
