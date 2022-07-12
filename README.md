@@ -14,4 +14,5 @@ To use:
 - Run `1-build-and-run-containers.sh` to build and run the TAK Server and DB containers. The TAK Server will start up whenever your Pi starts up.
 
 If you want to wipe the server and start fresh, delete and re-create the `tak-db` folder.
+
 Certs are in `tak/certs/files`
