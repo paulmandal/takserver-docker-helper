@@ -21,10 +21,8 @@ cd "`echo ${targetZip} | sed 's/\.zip//'`"
 docker build -t takserver-db:${takServerVersion} -f docker/Dockerfile.takserver-db . \
 && docker network create takserver-net-${takServerVersion} \
 && mkdir tak-db \
-&& docker run -d -v $(pwd)/tak-db:/var/lib/postgresql/data:z -v $(pwd)/tak:/opt/tak:z -it -p 5432:5432 --network takserver-net-${takServerVersion} --network-alias tak-database --name takserver-db-${takServerVersion} takserver-db:${takServerVersion} \
+&& docker run -d -v $(pwd)/tak-db:/var/lib/postgresql/data:z -v $(pwd)/tak:/opt/tak:z -it -p 5432:5432 --network takserver-net-${takServerVersion} --restart unless-stopped --network-alias tak-database --name takserver-db-${takServerVersion} takserver-db:${takServerVersion} \
 && sudo docker build -t takserver:${takServerVersion} -f docker/Dockerfile.takserver . \
-&& docker run -d -v $(pwd)/tak:/opt/tak:z -it -p 8080:8080 -p 8443:8443 -p 8444:8444 -p 8446:8446 -p 8087:8087 -p 8088:8088 -p 9000:9000 -p 9001:9001 -p 8089:8089 --network takserver-net-${takServerVersion} --name takserver-${takServerVersion} takserver:${takServerVersion} \
+&& docker run -d -v $(pwd)/tak:/opt/tak:z -it -p 8080:8080 -p 8443:8443 -p 8444:8444 -p 8446:8446 -p 8087:8087 -p 8088:8088 -p 9000:9000 -p 9001:9001 -p 8089:8089 --restart unless-stopped --network takserver-net-${takServerVersion} --name takserver-${takServerVersion} takserver:${takServerVersion} \
 && docker exec -it takserver-${takServerVersion} bash -c "cd /opt/tak/certs && ./makeRootCa.sh" \
 && docker exec -it takserver-${takServerVersion} bash -c "cd /opt/tak/certs && ./makeCert.sh server takserver"
-
-echo "su $USER --command='docker start takserver-db-${takServerVersion} takserver-${takServerVersion}'
