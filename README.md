@@ -1,6 +1,6 @@
 # TAK Server Docker Helper
 
-Simple scripts to set up a fresh Raspbian 64-bit or Ubuntu Server 64-bit install with TAK Server. The server will generate certs if you want to use TLS. The script `./mk-client-cert.sh` can be used to generate a client certificate. `reload-certs.sh` will restart the TAK Server and reload certs.
+Simple scripts to set up a fresh Raspbian 64-bit or Ubuntu Server 64-bit install with TAK Server. The server will generate certs if you want to use TLS.
 
 This is intended to help you spin up a simple TAK Server install on a Raspberry Pi, for anything more extensive you should refer to the server manual.
 
@@ -14,6 +14,15 @@ To use:
 - Run `1-build-and-run-containers.sh` to build and run the TAK Server and DB containers. The TAK Server will start up whenever your Pi starts up.
 
 If you want to wipe the server and start fresh, delete and re-create the `tak-db` folder.
+
+Some useful scripts are created in the unzipped TAK Server folder:
+
+| script  | description  |
+|---|---|
+| mk-client-cert.sh | Creates a client certificate in tak/certs/files, the .p12 file is the one you need for your device |
+| reload-cert.sh | Restart the TAK Server and load any new certs |
+| create-http-user.sh | Creates a user/password for accessing the HTTP server on port 8080 |
+| add-webadmin-role-to-cert.sh | Adds the admin role to an existing cert, allowing the cert holder to connect to the HTTPS server on port 8443 |
 
 Certs are in `tak/certs/files`
 
