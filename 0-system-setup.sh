@@ -40,8 +40,44 @@ sed -i "s/-t stretch-backports//" docker/Dockerfile.takserver-db
 sed -i "s#postgresql/10/#postgresql/14/#g" tak/db-utils/configureInDocker.sh
 
 # create some useful scripts
-echo '#!/bin/bash' > mk-client-cert.sh && echo 'docker exec -it takserver-${takServerVersion} bash -c "cd /opt/tak/certs && ./makeCert.sh client $1"' >> mk-client-cert.sh && chmod a+x mk-client-cert.sh
-echo '#!/bin/bash' > reload-certs.sh && echo 'docker exec -d takserver-${takServerVersion} bash -c "cd /opt/tak/ && ./configureInDocker.sh"' >> reload-certs.sh && chmod a+x reload-certs.sh
+tee -a mk-client-cert.sh <<EOF
+#!/bin/bash
+if [ -z "\${1}" ]
+then
+  echo "Usage \${0} <client name>"
+fi
+
+docker exec -it takserver-${takServerVersion} bash -c "cd /opt/tak/certs && ./makeCert.sh client \${1}"
+EOF
+chmod a+x mk-client-cert.sh
+
+tee -a reload-certs.sh <<EOF
+#!/bin/bash
+docker exec -d takserver-${takServerVersion} bash -c "cd /opt/tak/ && ./configureInDocker.sh"
+EOF
+chmod a+x reload-certs.sh
+
+tee -a create-http-user.sh <<EOF
+#!/bin/bash
+if [ -z "\${1}" -o -z "\${2}" ]
+then
+  echo "Usage \${0} <username> <password>"
+fi
+
+docker exec takserver-${takServerVersion} bash -c "cd /opt/tak/ && java -jar /opt/tak/utils/UserManager.jar usermod -A -p \${2} \${1}"
+EOF
+chmod a+x create-http-user.sh
+
+tee -a add-webadmin-role-to-cert.sh <<EOF
+#!/bin/bash
+if [ -z "\${1}" ]
+then
+  echo "Usage \${0} <client name>"
+fi
+
+docker exec takserver-${takServerVersion} bash -c "cd /opt/tak/ && java -jar utils/UserManager.jar certmod -A certs/files/\${1}.pem"
+EOF
+chmod a+x add-webadmin-role-to-cert.sh
 
 # Update system and reboot
 sudo apt upgrade -y
