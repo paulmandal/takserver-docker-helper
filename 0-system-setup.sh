@@ -42,7 +42,7 @@ sed -i "s/-t stretch-backports//" docker/Dockerfile.takserver-db
 sed -i "s#postgresql/10/#postgresql/14/#g" tak/db-utils/configureInDocker.sh
 
 # create some useful scripts
-tee -a mk-client-cert.sh <<EOF
+tee -a mk-client-cert.sh <<EOF > /dev/null
 #!/bin/bash
 if [ -z "\${1}" ]
 then
@@ -54,13 +54,13 @@ docker exec -it takserver-${takServerVersion} bash -c "cd /opt/tak/certs && ./ma
 EOF
 chmod a+x mk-client-cert.sh
 
-tee -a reload-certs.sh <<EOF
+tee -a reload-certs.sh <<EOF > /dev/null
 #!/bin/bash
 docker exec -d takserver-${takServerVersion} bash -c "cd /opt/tak/ && ./configureInDocker.sh"
 EOF
 chmod a+x reload-certs.sh
 
-tee -a create-http-user.sh <<EOF
+tee -a create-http-user.sh <<EOF > /dev/null
 #!/bin/bash
 if [ -z "\${1}" -o -z "\${2}" ]
 then
@@ -72,7 +72,7 @@ docker exec takserver-${takServerVersion} bash -c "cd /opt/tak/ && java -jar /op
 EOF
 chmod a+x create-http-user.sh
 
-tee -a add-webadmin-role-to-cert.sh <<EOF
+tee -a add-webadmin-role-to-cert.sh <<EOF > /dev/null
 #!/bin/bash
 if [ -z "\${1}" ]
 then
@@ -84,7 +84,7 @@ docker exec takserver-${takServerVersion} bash -c "cd /opt/tak/ && java -jar uti
 EOF
 chmod a+x add-webadmin-role-to-cert.sh
 
-tee -a mk-server-conn-pkg.sh <<OUTEREOF
+tee -a mk-server-conn-pkg.sh <<OUTEREOF > /dev/null
 #!/bin/bash
 if [ -z "\${1}" -o -z "\${2}" -o -z "\${3}" -o -z "\${4}" ]
 then
@@ -127,7 +127,7 @@ else
   manifestPath="manifest.xml"
 fi
 
-tee -a \${manifestPath} <<EOF
+tee -a \${manifestPath} <<EOF > /dev/null
 <MissionPackageManifest version="2">
    <Configuration>
       <Parameter name="uid" value="\${manifestUuid}"/>
@@ -142,7 +142,7 @@ tee -a \${manifestPath} <<EOF
 </MissionPackageManifest>
 EOF
 
-tee -a preference.pref <<EOF
+tee -a preference.pref <<EOF > /dev/null
 <?xml version='1.0' encoding='ASCII' standalone='yes'?>
 <preferences>
 	<preference version="1" name="cot_streams">
@@ -165,7 +165,9 @@ sudo chmod 666 ./*p12
 zip -qr "\${destDir}/takserver-conn-pkg-\${clientName}.zip" ./*
 popd
 rm -rf "\${workingDir}"
+echo "Created \${destDir}/takserver-conn-pkg-\${clientName}.zip"
 OUTEREOF
+chmod a+x mk-server-conn-pkg.sh
 
 # Update system and reboot
 sudo apt upgrade -y

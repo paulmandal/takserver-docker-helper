@@ -2,10 +2,12 @@
 source helper-script.conf
 
 echo "Before you run this script: "
-echo " - Edit your tak/CoreConfig.xml and set a db password"
-echo " - Add the SSL input if you want it and comment out the others if you don't want them:"
+echo " - Edit your tak/CoreConfig.xml"
+echo "   - Set a db password (search for password)"
+echo "   - Add the SSL input if you want it and comment out the others if you don't want them:"
 echo '         <input _name="stdssl" protocol="tls" port="8089" auth="x509"/>'
 echo " - Edit tak/certs/cert-metadata.sh"
+echo "   - Add city/state/org/etc"
 
 confirmContinue=n
 echo -n "Enter Y to continue: "
