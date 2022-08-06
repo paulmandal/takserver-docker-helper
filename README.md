@@ -20,7 +20,7 @@ Some useful scripts are created in the unzipped TAK Server folder:
 | script  | description  |
 |---|---|
 | mk-client-cert.sh | Creates a client certificate in tak/certs/files, the .p12 file is the one you need for your device |
-| mk-server-conn-pkg.sh | Creates a server connection package for a given user that can be imported into ATAK or iTAK" |
+| mk-client-dp.sh | Creates a server connection package for a given user that can be imported into ATAK or iTAK |
 | reload-cert.sh | Restart the TAK Server and load any new certs |
 | create-http-user.sh | Creates a user/password for accessing the HTTP server on port 8080 |
 | add-webadmin-role-to-cert.sh | Adds the admin role to an existing cert, allowing the cert holder to connect to the HTTPS server on port 8443 |
