@@ -28,7 +28,8 @@ sudo usermod -aG docker $USER
 sudo apt install -y unzip
 
 # unzip TAKServer
-unzip ${targetZip}
+echo "Unzipping TAK Server package..."
+unzip -q ${targetZip}
 cd "`echo ${targetZip} | sed 's/\.zip//'`"
 
 mkdir client-pkg
