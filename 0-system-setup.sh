@@ -109,6 +109,7 @@ manifestUuid=`cat /proc/sys/kernel/random/uuid`
 
 destDir=`pwd`/client-pkg
 workingDir="/tmp/tak-server-`date +%s`-\${clientName}"
+outputZip="\${destDir}/takserver-conn-pkg-\${clientName}.zip"
 
 mkdir "/tmp/tak-server-`date +%s`-\${clientName}"
 
@@ -162,10 +163,11 @@ tee -a preference.pref <<EOF > /dev/null
 EOF
 
 sudo chmod 666 ./*p12
-zip -qr "\${destDir}/takserver-conn-pkg-\${clientName}.zip" ./*
+sudo zip -qr "\${outputZip}" ./*
+sudo chmod 600 "${outputZip}"
 popd
 rm -rf "\${workingDir}"
-echo "Created \${destDir}/takserver-conn-pkg-\${clientName}.zip"
+echo "Created \${outputZip}"
 OUTEREOF
 chmod a+x mk-server-conn-pkg.sh
 
