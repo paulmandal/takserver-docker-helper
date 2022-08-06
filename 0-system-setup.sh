@@ -32,7 +32,7 @@ echo "Unzipping TAK Server package..."
 unzip -q ${targetZip}
 cd "`echo ${targetZip} | sed 's/\.zip//'`"
 
-mkdir client-pkg
+mkdir client-data-pkgs
 
 # fix TAKServer Docker for Postgres 14.4
 sed -i "s/FROM postgres:.*/FROM postgres:14.4/" docker/Dockerfile.takserver-db
@@ -85,92 +85,129 @@ docker exec takserver-${takServerVersion} bash -c "cd /opt/tak/ && java -jar uti
 EOF
 chmod a+x add-webadmin-role-to-cert.sh
 
-tee -a mk-server-conn-pkg.sh <<OUTEREOF > /dev/null
+tee -a mk-client-dp.sh <<EOF > /dev/null
 #!/bin/bash
-if [ -z "\${1}" -o -z "\${2}" -o -z "\${3}" -o -z "\${4}" ]
-then
-  echo "Usage \${0} <client name> \"<server name>\" <takserver address:port:proto> <ios/android>"
-  echo " e.g. \${0} someUser \"Our TAK Server\" takserver.fakeaddress.fake:8089:ssl ios"
-  exit 1
+if [ \$# -eq 0 ]; then
+    printf "Usage: \${0} <client>"
+    exit
 fi
 
-if [ "\${4}" != "ios" -a "\${4}" != "android" ]
-then
-  echo "Usage \${0} <client name> \"<server name>\" <takserver address:port:proto> <ios/android>"
-  echo " e.g. \${0} someUser \"Our TAK Server\" takserver.fakeaddress.fake:8089:ssl ios"
-  exit 1
+# Check for missing requirements
+missingreq=0
+for req in printf tr zip docker
+do
+    if [ -z \$(which \${req}) ]; then
+        printf "This script requires \${req}.  Please install it first.\n"
+        ((missingreq++))
+    fi
+done
+if [ \$missingreq -gt 0 ]; then
+    exit
 fi
+client=\$1
 
-clientName=\${1}
-serverName=\${2}
-connString=\${3}
-pkgType=\${4}
-
-manifestUuid=`cat /proc/sys/kernel/random/uuid`
-
-destDir=`pwd`/client-pkg
-workingDir="/tmp/tak-server-`date +%s`-\${clientName}"
-outputZip="\${destDir}/takserver-conn-pkg-\${clientName}.zip"
-
-mkdir "/tmp/tak-server-`date +%s`-\${clientName}"
-
-sudo cp "tak/certs/files/\${clientName}.p12" "\${workingDir}"
-sudo cp "tak/certs/files/truststore-root.p12" "\${workingDir}"
-
-pushd "\${workingDir}"
-
-if [ "\${pkgType}" == "android" ]
-then
-  manifestPath="MANIFEST/manifest.xml"
-  certPath="/storage/emulated/0/atak/cert"
-  mkdir MANIFEST
+# Load variables from config file
+if [ -f client-dp.conf ]; then
+    printf "Loading configuration file.\n"
+    . client-dp.conf
 else
-  certPath="certs"
-  manifestPath="manifest.xml"
+    printf "Configuration file not found.  Creating a new one.\n"
 fi
 
-tee -a \${manifestPath} <<EOF > /dev/null
-<MissionPackageManifest version="2">
-   <Configuration>
-      <Parameter name="uid" value="\${manifestUuid}"/>
-      <Parameter name="name" value="\${serverName}"/>
-      <Parameter name="onReceiveDelete" value="true"/>
-   </Configuration>
-   <Contents>
-      <Content ignore="false" zipEntry="preference.pref"/>
-      <Content ignore="false" zipEntry="truststore-root.p12"/>
-      <Content ignore="false" zipEntry="\${clientName}.p12"/>
-   </Contents>
-</MissionPackageManifest>
-EOF
+# Check that all configuration variables loaded successfully
+if [ -z "\${servername}" ]; then
+    printf "Enter a server name to be displayed in TAK clients. (Default is TAK Server)\n"
+    read servername
+    if [ -z "\${servername}" ]; then
+        servername="TAK Server"
+    fi
+    printf "servername=\"\${servername}\"\n" >> client-dp.conf
+fi
+if [ -z "\${serveraddress}" ]; then
+    printf "Enter the server's hostname or IP address.  This must be accessible to TAK clients. (Default is \$(hostname))\n"
+    read serveraddress
+    if [ -z "\${serveraddress}" ]; then
+        serveraddress=\$(hostname)
+    fi
+    printf "serveraddress=\"\${serveraddress}\"\n" >> client-dp.conf
+fi
+if [ -z "\${serverport}" ]; then
+    printf "Enter the SSL port number.  (Default is 8089)\n"
+    read serverport
+    if [ -z "\${serverport}" ]; then
+        serverport="8089"
+    fi
+    printf "serverport=\"\${serverport}\"\n" >> client-dp.conf
+fi
+if [ -z "\${takcontainer}" ]; then
+    printf "Enter the name of the TAK Server's docker container. (Default is takserver-4.7)\n"
+    read takcontainer
+    if [ -z "\${takcontainer}" ]; then
+        takcontainer="takserver-4.7"
+    fi
+    printf "takcontainer=\"\${takcontainer}\"\n" >> client-dp.conf
+fi
 
-tee -a preference.pref <<EOF > /dev/null
-<?xml version='1.0' encoding='ASCII' standalone='yes'?>
-<preferences>
-	<preference version="1" name="cot_streams">
-		<entry key="count" class="class java.lang.Integer">1</entry>
-		<entry key="description0" class="class java.lang.String">\${serverName}</entry>
-		<entry key="enabled0" class="class java.lang.Boolean">true</entry>
-		<entry key="connectString0" class="class java.lang.String">\${connString}</entry>
-	</preference>
-	<preference version="1" name="com.atakmap.app_preferences">
-		<entry key="displayServerConnectionWidget" class="class java.lang.Boolean">true</entry>
-		<entry key="caLocation" class="class java.lang.String">/storage/emulated/0/atak/cert/truststore-root.p12</entry>
-		<entry key="certificateLocation" class="class java.lang.String">\${certPath}/\${clientName}.p12</entry>
-    <entry key="caPassword" class="class java.lang.String">atakatak</entry>
-		<entry key="clientPassword" class="class java.lang.String">atakatak</entry>
-	</preference>
-</preferences>
-EOF
+# If client name includes spaces, replace them with dashes
+tr ' ' '-' <<<"\$client"
+uid=\$(cat /proc/sys/kernel/random/uuid)
+dpname=\$(printf "\${servername}-DP" | tr ' ' '-')
+mkdir \$client
 
-sudo chmod 666 ./*p12
-sudo zip -qr "\${outputZip}" ./*
-sudo chmod 600 "${outputZip}"
-popd
-rm -rf "\${workingDir}"
-echo "Created \${outputZip}"
-OUTEREOF
-chmod a+x mk-server-conn-pkg.sh
+#Stop if target directory exists
+if [ \$? -ne 0 ]; then
+  printf "Error creating directory.  Do you already have a directory called \${client}?\nThe script will now stop to avoid data loss.\n"
+  exit
+fi
+
+# Create the client certs in the TAK container
+if [ ! -f "tak/certs/files/\${client}.p12" ]
+then
+  docker exec -it \${takcontainer} bash -c "cd /opt/tak/certs && ./makeCert.sh client \${client}"
+fi
+
+# Create the data package manifest file
+printf "<MissionPackageManifest version=\"2\">\n" > \${client}/manifest.xml
+printf "  <Configuration>\n" >> \${client}/manifest.xml
+printf "    <Parameter name=\"uid\" value=\"\${uid}\"/>\n" >> \${client}/manifest.xml
+printf "    <Parameter name=\"name\" value=\"\${dpname}\"/>\n" >> \${client}/manifest.xml
+printf "    <Parameter name=\"onReceiveDelete\" value=\"true\"/>\n" >> \${client}/manifest.xml
+printf "  </Configuration>\n" >> \${client}/manifest.xml
+printf "  <Contents>\n" >> \${client}/manifest.xml
+printf "    <Content ignore=\"false\" zipEntry=\"certs/preference.pref\"/>\n" >> \${client}/manifest.xml
+printf "    <Content ignore=\"false\" zipEntry=\"certs/takserver-\${uid}.p12\"/>\n" >> \${client}/manifest.xml
+printf "    <Content ignore=\"false\" zipEntry=\"certs/\${client}-\${uid}.p12\"/>\n" >> \${client}/manifest.xml
+printf "  </Contents>\n" >> \${client}/manifest.xml
+printf "</MissionPackageManifest>\n" >> \${client}/manifest.xml
+
+# Create the pref file
+printf "<?xml version='1.0' encoding='ASCII' standalone='yes'?>\n" > \${client}/preference.pref
+printf "<preferences>\n" >> \${client}/preference.pref
+printf "  <preference version=\"1\" name=\"cot_streams\">\n" >> \${client}/preference.pref
+printf "    <entry key=\"count\" class=\"class java.lang.Integer\">1</entry>\n" >> \${client}/preference.pref
+printf "    <entry key=\"description0\" class=\"class java.lang.String\">\${servername}</entry>\n" >> \${client}/preference.pref
+printf "    <entry key=\"enabled0\" class=\"class java.lang.Boolean\">true</entry>\n" >> \${client}/preference.pref
+printf "    <entry key=\"connectString0\" class=\"class java.lang.String\">\${serveraddress}:\${serverport}:ssl</entry>\n" >> \${client}/preference.pref
+printf "  </preference>\n" >> \${client}/preference.pref
+printf "  <preference version=\"1\" name=\"com.atakmap.app_preferences\">\n" >> \${client}/preference.pref
+printf "    <entry key=\"displayServerConnectionWidget\" class=\"class java.lang.Boolean\">true</entry>\n" >> \${client}/preference.pref
+printf "    <entry key=\"caLocation\" class=\"class java.lang.String\">cert/takserver-\${uid}.p12</entry>\n" >> \${client}/preference.pref
+printf "    <entry key=\"caPassword\" class=\"class java.lang.String\">atakatak</entry>\n" >> \${client}/preference.pref
+printf "    <entry key=\"clientPassword\" class=\"class java.lang.String\">atakatak</entry>\n" >> \${client}/preference.pref
+printf "    <entry key=\"certificateLocation\" class=\"class java.lang.String\">cert/\${client}-\${uid}.p12</entry>\n" >> \${client}/preference.pref
+printf "  </preference>\n" >> \${client}/preference.pref
+printf "</preferences>\n" >> \${client}/preference.pref
+
+# Copy the truststore and client certs - append a unique ID to avoid filename collisions
+docker cp \${takcontainer}:/opt/tak/certs/files/\${client}.p12 \${client}/\${client}-\${uid}.p12
+docker cp \${takcontainer}:/opt/tak/certs/files/takserver.p12 \${client}/takserver-\${uid}.p12
+
+# Compress the data package and remove temporary files
+zip client-data-pkgs/\${client} \${client}/*
+rm -r \${client}
+echo "Created client-data-pkgs/\${client}.zip"
+EOF
+chmod a+x mk-client-dp.sh
 
 # Update system and reboot
 sudo apt upgrade -y

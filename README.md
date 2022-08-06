@@ -26,6 +26,6 @@ Some useful scripts are created in the unzipped TAK Server folder:
 | add-webadmin-role-to-cert.sh | Adds the admin role to an existing cert, allowing the cert holder to connect to the HTTPS server on port 8443 |
 
 Certs are in `tak/certs/files`
-Client connection packages are in `client-pkg/`
+Client connection packages are in `client-data-pkgs/`
 
 Why not give me a bunch of money? [![](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/paypalme/paypaulmandal)
